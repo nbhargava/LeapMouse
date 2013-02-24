@@ -24,6 +24,10 @@ class HandListener(Leap.Listener):
     def on_init(self, controller):
         self.on = True
         self.screens = controller.calibrated_screens
+
+        controller.enable_gesture(Leap.Gesture.TYPE_SCREEN_TAP)
+        controller.enable_gesture(Leap.Gesture.TYPE_CIRCLE)
+
         print "Initialized"
 
     def on_connect(self, controller):
@@ -60,6 +64,13 @@ class HandListener(Leap.Listener):
                     y_pixels = screen_to_choose.height_pixels - position.y * screen_to_choose.height_pixels
                     self.mouse.move(x_pixels,y_pixels)
                     #print "(%d, %d)" % (x_pixels, y_pixels)
+                if len(hand.fingers) == 2:
+                    x_pos = self.mouse.position()[0]
+                    y_pos = self.mouse.position()[1]
+                    for gesture in frame.gestures():
+                        if gesture.type == Leap.Gesture.TYPE_SCREEN_TAP:
+                            self.mouse.click(x_pos, y_pos, 1)
+
 
             """
             if len(hand.fingers) >= 4:
