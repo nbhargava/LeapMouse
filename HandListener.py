@@ -1,4 +1,5 @@
 import lib.Leap as Leap
+import math
 import time
 from pymouse import PyMouse
 
@@ -48,34 +49,63 @@ class HandListener(Leap.Listener):
             hand = frame.hands[0]
 
             if self.on:
+                self.process_gestures(controller)
+
                 if len(hand.fingers) == 1:
                     finger = hand.fingers[0]
 
-                    screen_to_choose = self.screens[0]
-                    """min_distance = screen_to_choose.distance_to_point(finger.tip_position)
-                    for screen in self.screens:
-                        if min_distance == -1 or screen.distance_to_point(finger.tip_position) < min_distance:
-                            min_distance = screen.distance_to_point(finger.tip_position)
+                    screen_to_choose = None
+                    position = None
+                    chosen_screen = False
+
+                    for screen in [self.screens[0]]: # Swap new one in when you can handle multiple screens
+                    #for screen in self.screens:
+                        candidate = screen.intersect(finger, True)
+                        
+                        x_pos = candidate.x
+                        y_pos = candidate.y
+                        
+                        # Throws out datapoints when you point off screen - have to figure out in-bounds geometry for multiscreen
+                        if not (math.isnan(x_pos) or math.isnan(y_pos)):
                             screen_to_choose = screen
-                    """
-                    position = screen_to_choose.intersect(finger, True)
+                            position = candidate
+                            chosen_screen = True
+
+
+                    if not chosen_screen: return
                     
+
                     x_pixels = position.x * screen_to_choose.width_pixels
                     y_pixels = screen_to_choose.height_pixels - position.y * screen_to_choose.height_pixels
-                    self.mouse.move(x_pixels,y_pixels)
-                    #print "(%d, %d)" % (x_pixels, y_pixels)
-                if len(hand.fingers) == 2:
-                    x_pos = self.mouse.position()[0]
-                    y_pos = self.mouse.position()[1]
-                    for gesture in frame.gestures():
-                        if gesture.type == Leap.Gesture.TYPE_SCREEN_TAP:
-                            self.mouse.click(x_pos, y_pos, 1)
+                    
+                    # currently only sets it in relation to the primary screen
+                    self.mouse.move(x_pixels,y_pixels)                    
+
 
 
             """
+            # Handles turning it off and on with 4 finger wave
             if len(hand.fingers) >= 4:
                 result = self.timer.signal()
                 if result:
                     self.on = not self.on
                     #print self.on
             """
+    def process_gestures(self, controller):
+        frame = controller.frame()
+        hand = frame.hands[0]
+
+        if len(hand.fingers) < 2: return
+
+        x_pos = self.mouse.position()[0]
+        y_pos = self.mouse.position()[1]
+        for gesture in frame.gestures():
+            if gesture.type == Leap.Gesture.TYPE_SCREEN_TAP:
+                if len(hand.fingers) == 2:
+                    self.mouse.click(x_pos, y_pos, 1)
+                elif len(hand.fingers) == 3:
+                    self.mouse.click(x_pos, y_pos, 2)
+                break # hack so that you only count one click with multi-finger gesture
+
+                
+                
